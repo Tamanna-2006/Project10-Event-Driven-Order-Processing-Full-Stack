@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.1
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  order-service:
+    build: ./services/order-service
+    command: node src/index.js
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/ecom
+      - KAFKA_BROKERS=kafka:9092
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - kafka
+      - mongo
+
+  inventory-service:
+    build: ./services/inventory-service
+    command: node src/index.js
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/ecom
+      - KAFKA_BROKERS=kafka:9092
+      - PORT=3002
+    ports:
+      - "3002:3002"
+    depends_on:
+      - kafka
+      - mongo
+
+  payment-service:
+    build: ./services/payment-service
+    command: node src/index.js
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/ecom
+      - KAFKA_BROKERS=kafka:9092
+      - PORT=3003
+    ports:
+      - "3003:3003"
+    depends_on:
+      - kafka
+      - mongo
+
+  shipping-service:
+    build: ./services/shipping-service
+    command: node src/index.js
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/ecom
+      - KAFKA_BROKERS=kafka:9092
+      - PORT=3004
+    ports:
+      - "3004:3004"
+    depends_on:
+      - kafka
+      - mongo
+
+  ui:
+    build: ./ui
+    command: npm start
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - order-service
+
+volumes:
+  mongo-data:
