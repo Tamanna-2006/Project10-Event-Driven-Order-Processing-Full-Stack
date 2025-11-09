@@ -1,6 +1,6 @@
-version: '3.8'
 
 services:
+  # Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.1
     environment:
@@ -9,6 +9,7 @@ services:
     ports:
       - "2181:2181"
 
+  # Kafka
   kafka:
     image: confluentinc/cp-kafka:7.4.1
     depends_on:
@@ -22,6 +23,7 @@ services:
     ports:
       - "9092:9092"
 
+  # MongoDB
   mongo:
     image: mongo:6.0
     ports:
@@ -29,6 +31,7 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  # Order Service
   order-service:
     build: ./services/order-service
     command: node src/index.js
@@ -41,7 +44,9 @@ services:
     depends_on:
       - kafka
       - mongo
+    restart: unless-stopped
 
+  # Inventory Service
   inventory-service:
     build: ./services/inventory-service
     command: node src/index.js
@@ -54,7 +59,9 @@ services:
     depends_on:
       - kafka
       - mongo
+    restart: unless-stopped
 
+  # Payment Service
   payment-service:
     build: ./services/payment-service
     command: node src/index.js
@@ -67,7 +74,9 @@ services:
     depends_on:
       - kafka
       - mongo
+    restart: unless-stopped
 
+  # Shipping Service
   shipping-service:
     build: ./services/shipping-service
     command: node src/index.js
@@ -80,16 +89,19 @@ services:
     depends_on:
       - kafka
       - mongo
+    restart: unless-stopped
 
+  # React UI
   ui:
     build: ./ui
     command: npm start
     environment:
-      - REACT_APP_API_URL=http://localhost:3001
+      - REACT_APP_API_URL=http://order-service:3001
     ports:
       - "3000:3000"
     depends_on:
       - order-service
+    restart: unless-stopped
 
 volumes:
   mongo-data:
